@@ -1,0 +1,27 @@
+const API_URL = import.meta.env.VITE_API_URL;
+
+export async function fetchWithAuth(
+    endpoint: string,
+    options: RequestInit = {}
+) {
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers: {
+            "Content-Type": "application/json",
+            ...options.headers,
+            ...(token && {
+                Authorization: `Bearer ${token}`,
+            }),
+        },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Something went wrong");
+    }
+
+    return data;
+}
