@@ -10,7 +10,7 @@ UI components, organized as PascalCase folders:
 | `Inbox/` | `WorkspaceInviteNotification.tsx` — accept/decline flow for invitations |
 | `SharedComponents/` | App-wide, reused across pages (see below) |
 | `Skeleton/` | `glass-skeleton` shimmering placeholders — `KanbanSkeleton.tsx`, `WorkspaceSkeleton.tsx` |
-| `UserComponents/LandingPageComponent/` | `Login.tsx` and `Signup.tsx`, the auth tabs `AuthPage` mediates between |
+| `UserComponents/LandingPageComponent/` | `Login.tsx`, `Signup.tsx` (confirm-password field) and `ForgotPassword.tsx`, the tabs/states `AuthPage` mediates between |
 
 ## SharedComponents (verbatim rules)
 

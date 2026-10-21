@@ -10,6 +10,7 @@ import SettingsPage from "./pages/UserPage/SettingsPage";
 import { Routes, Route } from "react-router-dom";
 import TaskPage from "./pages/UserPage/TaskPage";
 import BoardPage from "./pages/UserPage/BoardPage";
+import ResetPasswordPage from "./pages/UserPage/ResetPasswordPage";
 import { useEffect, useState } from "react";
 import { getUserWorkspaces } from "./api/workspaceApi";
 import type { Workspace } from "./interface/workspaceInteface";
@@ -29,6 +30,15 @@ function App() {
     const [workspaceRefreshKey, setWorkspaceRefreshKey] = useState(0);
 
     async function getWorkspace() {
+        // A visitor without a session (landing page, /login, /register) would
+        // otherwise fire a workspace request that can only fail with 401 and
+        // toast an error. PrivateRoute sends them to login anyway.
+        if (!localStorage.getItem("token")) {
+            setActiveWorkspace(null);
+            setActiveProject(null);
+            return;
+        }
+
         try {
             setIsLoading(true);
             const response = await getUserWorkspaces();
@@ -88,6 +98,9 @@ function App() {
                     path="/register"
                     element={<AuthPage initialMode="signup" />}
                 />
+
+                {/* Reached from a "reset password" email link. */}
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Route>
 
             {/* Private routes */}

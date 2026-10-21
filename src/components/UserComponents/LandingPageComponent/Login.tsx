@@ -9,9 +9,11 @@ type LoginProps = {
      * retype the email they just entered.
      */
     initialEmail?: string;
+    /** "Forgot password?" → parent opens the forgot form, with the typed email. */
+    onForgotPassword?: (email: string) => void;
 };
 
-export default function Login({ initialEmail = "" }: LoginProps) {
+export default function Login({ initialEmail = "", onForgotPassword }: LoginProps) {
     const API_URL = import.meta.env.VITE_API_URL;
 
     const navigate = useNavigate();
@@ -105,6 +107,14 @@ export default function Login({ initialEmail = "" }: LoginProps) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                 />
+
+                <button
+                    type="button"
+                    onClick={() => onForgotPassword?.(email)}
+                    className="w-fit cursor-pointer text-xs text-white/55 hover:text-white/90"
+                >
+                    Forgot password?
+                </button>
 
                 {error && (
                     <p className="text-sm status-danger" role="alert">

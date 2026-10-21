@@ -11,6 +11,7 @@ One file per backend domain. Each wrapper calls `fetchWithAuth`, then unwraps
 | `taskApi.ts` | `/api/task` | `{ success, tasks }` → `tasks` |
 | `notificationApi.ts` | `/api/notification` | `{ success, notifications }` → `notifications` |
 | `userApi.ts` | `/api/users` | `{ success, ... }` |
+| `authApi.ts` | `/api/auth/forgot-password`, `/api/auth/reset-password` | `{ success, message }` (+ dev-only `devResetUrl`) |
 | `aiApi.ts` | `/api/ai` | AI subtask generation |
 | `photoApi.ts` | photo endpoints | upload progress/URLs |
 

@@ -10,6 +10,7 @@ Route-level components, mounted by `../App.tsx`. Landing page lives in
 | `/` | `LandingPage.tsx` — marketing page | `PublicRoute` |
 | `/login` | `AuthPage initialMode="login"` | `PublicRoute` |
 | `/register` | `AuthPage initialMode="signup"` | `PublicRoute` |
+| `/reset-password` | `ResetPasswordPage` — consumes the emailed `?token=` | `PublicRoute` |
 | `/board` | `BoardPage.tsx` — Kanban | `PrivateRoute` + `Layout` |
 | `/inbox` | `InboxPage.tsx` — notifications | `PrivateRoute` + `Layout` |
 | `/task` | `TaskPage.tsx` — assigned/created/all + filters | `PrivateRoute` + `Layout` |

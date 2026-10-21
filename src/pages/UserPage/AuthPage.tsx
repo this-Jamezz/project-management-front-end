@@ -3,14 +3,17 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import Login from "../../components/UserComponents/LandingPageComponent/Login";
 import Signup from "../../components/UserComponents/LandingPageComponent/Signup";
+import ForgotPassword from "../../components/UserComponents/LandingPageComponent/ForgotPassword";
+
+type AuthPageMode = "login" | "signup" | "forgot";
 
 type AuthPageProps = {
     /** Initial tab, driven by the route: /login or /register. */
-    initialMode: "login" | "signup";
+    initialMode: AuthPageMode;
 };
 
 export default function AuthPage({ initialMode }: AuthPageProps) {
-    const [mode, setMode] = useState<"login" | "signup">(initialMode);
+    const [mode, setMode] = useState<AuthPageMode>(initialMode);
     const [prefillEmail, setPrefillEmail] = useState("");
 
     /**
@@ -21,6 +24,15 @@ export default function AuthPage({ initialMode }: AuthPageProps) {
     function handleRegistered(email: string) {
         setPrefillEmail(email);
         setMode("login");
+    }
+
+    /**
+     * Called by Login's "Forgot password?". The typed email follows so the
+     * forgot form does not make them type it twice.
+     */
+    function handleForgotPassword(email: string) {
+        setPrefillEmail(email);
+        setMode("forgot");
     }
 
     return (
@@ -63,49 +75,63 @@ export default function AuthPage({ initialMode }: AuthPageProps) {
                         <h1 className="text-lg font-semibold">
                             {mode === "login"
                                 ? "Welcome back"
-                                : "Create your account"}
+                                : mode === "signup"
+                                    ? "Create your account"
+                                    : "Reset your password"}
                         </h1>
                         <p className="text-sm text-white/60">
                             {mode === "login"
                                 ? "Sign in to pick up where you left off."
-                                : "Start organising your team's work."}
+                                : mode === "signup"
+                                    ? "Start organising your team's work."
+                                    : "We'll email you a link to set a new one."}
                         </p>
                     </div>
 
-                    {/* Segmented control */}
-                    <div className="glass-subtle mt-6 flex h-12 w-full rounded-xl p-1">
-                        <button
-                            type="button"
-                            onClick={() => setMode("login")}
-                            aria-pressed={mode === "login"}
-                            className={`flex-1 cursor-pointer rounded-lg text-sm font-semibold transition-all duration-300 ${
-                                mode === "login"
-                                    ? "bg-white/20 text-white shadow-sm"
-                                    : "text-white/55 hover:text-white/90"
-                            }`}
-                        >
-                            Login
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setMode("signup")}
-                            aria-pressed={mode === "signup"}
-                            className={`flex-1 cursor-pointer rounded-lg text-sm font-semibold transition-all duration-300 ${
-                                mode === "signup"
-                                    ? "bg-white/20 text-white shadow-sm"
-                                    : "text-white/55 hover:text-white/90"
-                            }`}
-                        >
-                            Sign Up
-                        </button>
-                    </div>
+                    {/* Segmented control — not meaningful in forgot mode */}
+                    {mode !== "forgot" && (
+                        <div className="glass-subtle mt-6 flex h-12 w-full rounded-xl p-1">
+                            <button
+                                type="button"
+                                onClick={() => setMode("login")}
+                                aria-pressed={mode === "login"}
+                                className={`flex-1 cursor-pointer rounded-lg text-sm font-semibold transition-all duration-300 ${
+                                    mode === "login"
+                                        ? "bg-white/20 text-white shadow-sm"
+                                        : "text-white/55 hover:text-white/90"
+                                }`}
+                            >
+                                Login
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setMode("signup")}
+                                aria-pressed={mode === "signup"}
+                                className={`flex-1 cursor-pointer rounded-lg text-sm font-semibold transition-all duration-300 ${
+                                    mode === "signup"
+                                        ? "bg-white/20 text-white shadow-sm"
+                                        : "text-white/55 hover:text-white/90"
+                                }`}
+                            >
+                                Sign Up
+                            </button>
+                        </div>
+                    )}
 
                     {/* Form */}
                     <div className="mt-6">
                         {mode === "login" ? (
-                            <Login initialEmail={prefillEmail} />
-                        ) : (
+                            <Login
+                                initialEmail={prefillEmail}
+                                onForgotPassword={handleForgotPassword}
+                            />
+                        ) : mode === "signup" ? (
                             <Signup onRegistered={handleRegistered} />
+                        ) : (
+                            <ForgotPassword
+                                initialEmail={prefillEmail}
+                                onBackToLogin={() => setMode("login")}
+                            />
                         )}
                     </div>
                 </div>

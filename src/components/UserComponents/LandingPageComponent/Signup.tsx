@@ -16,14 +16,35 @@ export default function Signup({ onRegistered }: SignupProps) {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
-    const canSubmit = !isLoading && name.trim() !== "" && email.trim() !== "" && password.trim() !== "";
+    const mismatch = confirmPassword !== "" && password !== confirmPassword;
+
+    const canSubmit =
+        !isLoading &&
+        name.trim() !== "" &&
+        email.trim() !== "" &&
+        password.trim() !== "" &&
+        password === confirmPassword;
+
+    // Typing replaces the error as soon as the fields come in sync again.
+    function updateConfirmPassword(value: string) {
+        setConfirmPassword(value);
+        if (error === "Passwords do not match." && value === password) {
+            setError("");
+        }
+    }
 
     async function handleSignup() {
         // Guard against a second submit landing while the first is in flight.
         if (isLoading) return;
+
+        if (password !== confirmPassword) {
+            setError("Passwords do not match.");
+            return;
+        }
 
         try {
             setIsLoading(true);
@@ -50,8 +71,9 @@ export default function Signup({ onRegistered }: SignupProps) {
             // Success: confirm, then hand off to the login tab.
             toast.success("Registered successfully. Please log in.");
 
-            // Clear the password immediately; nothing else is worth keeping.
+            // Clear the passwords immediately; nothing else is worth keeping.
             setPassword("");
+            setConfirmPassword("");
 
             onRegistered(email.trim());
         } catch {
@@ -106,6 +128,24 @@ export default function Signup({ onRegistered }: SignupProps) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                 />
+
+                <input
+                    type="password"
+                    name="confirmPassword"
+                    aria-label="Confirm password"
+                    autoComplete="new-password"
+                    disabled={isLoading}
+                    className="input-default"
+                    placeholder="Confirm password"
+                    value={confirmPassword}
+                    onChange={(e) => updateConfirmPassword(e.target.value)}
+                />
+
+                {mismatch && !error && (
+                    <p className="text-sm status-danger" role="alert">
+                        Passwords do not match.
+                    </p>
+                )}
 
                 {error && (
                     <p className="text-sm status-danger" role="alert">
