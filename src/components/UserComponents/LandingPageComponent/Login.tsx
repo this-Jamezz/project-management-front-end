@@ -1,73 +1,135 @@
-import { useState } from "react"
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Loader } from "lucide-react";
+import { Loader, LogIn } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-export default function Login() {
+type LoginProps = {
+    /**
+     * Carried over from a successful registration so the user does not
+     * retype the email they just entered.
+     */
+    initialEmail?: string;
+};
+
+export default function Login({ initialEmail = "" }: LoginProps) {
     const API_URL = import.meta.env.VITE_API_URL;
 
-    const naviagte = useNavigate()
+    const navigate = useNavigate();
 
-    const [email, setEmail] = useState("");
+    const [email, setEmail] = useState(initialEmail);
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
+    // Sync the prefilled email if the parent changes it after mount.
+    useEffect(() => {
+        setEmail(initialEmail);
+    }, [initialEmail]);
 
+    const canSubmit = !isLoading && email.trim() !== "" && password.trim() !== "";
 
     async function handleLogin() {
+        // Guard against a double submit while the first is in flight.
+        if (isLoading) return;
+
         try {
-            setIsLoading(true)
+            setIsLoading(true);
             setError("");
+
             const response = await fetch(`${API_URL}/api/auth/log-in`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    email: email,
-                    password: password
-                })
-            })
+                    email: email.trim(),
+                    password: password,
+                }),
+            });
 
-            const data = await response.json();
+            const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
-                setError(data.error || "Login failed.");
+                // authController returns `{ error }` on failure.
+                setError(data.error || data.message || "Login failed.");
                 return;
             }
 
             localStorage.setItem("id", String(data.user.id));
-            localStorage.setItem("name", data.user.name)
-            localStorage.setItem("email", data.user.email)
-            localStorage.setItem("token", data.token)
-            toast.success(data.message)
-            naviagte("/board")
+            localStorage.setItem("name", data.user.name);
+            localStorage.setItem("email", data.user.email);
+            localStorage.setItem("token", data.token);
+            // The API returns photoUrl now, so a returning user keeps their
+            // avatar across sessions instead of reverting to initials.
+            if (data.user.photoUrl) {
+                localStorage.setItem("photoUrl", data.user.photoUrl);
+            }
 
-        }
-        catch (error) {
+            toast.success(data.message || "Signed in");
+            navigate("/board");
+        } catch {
             setError("Unable to connect to the server.");
-        }
-        finally{
-            setIsLoading(false)
+        } finally {
+            setIsLoading(false);
         }
     }
+
     return (
-        <>
-            <div className="flex flex-col items-center justify-center gap-2">
-                <div className="flex flex-col gap-2 w-full max-w-100">
-                    <input type="email" disabled={isLoading} className="input-default" placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
-                    <input type="password" disabled={isLoading} className="input-default" placeholder="Password" onChange={(e) => setPassword(e.target.value)} />
-                    {error && (
-                        <p className="text-red-500 text-sm">
-                            {error}
-                        </p>
+        <form
+            aria-busy={isLoading}
+            className="flex flex-col gap-2.5"
+            onSubmit={(e) => {
+                e.preventDefault();
+                handleLogin();
+            }}
+        >
+            <div className="flex flex-col gap-2.5">
+                <input
+                    type="email"
+                    name="email"
+                    aria-label="Email"
+                    autoComplete="email"
+                    disabled={isLoading}
+                    className="input-default"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                />
+
+                <input
+                    type="password"
+                    name="password"
+                    aria-label="Password"
+                    autoComplete="current-password"
+                    disabled={isLoading}
+                    className="input-default"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
+
+                {error && (
+                    <p className="text-sm status-danger" role="alert">
+                        {error}
+                    </p>
+                )}
+
+                <button
+                    type="submit"
+                    disabled={!canSubmit}
+                    className="button-positive mt-1"
+                >
+                    {isLoading ? (
+                        <>
+                            <Loader size={16} className="animate-spin" />
+                            Signing in
+                        </>
+                    ) : (
+                        <>
+                            <LogIn size={16} />
+                            Sign in
+                        </>
                     )}
-                    <button className="button-positive" disabled={isLoading} onClick={() => handleLogin()}>
-                        {isLoading? <Loader size={15} className="animate-spin" />: "Login"}
-                    </button>
-                </div>
+                </button>
             </div>
-        </>
-    )
+        </form>
+    );
 }

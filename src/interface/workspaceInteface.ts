@@ -24,6 +24,8 @@ export interface Workspace  {
   id: number;
   name: string;
   description: string;
+  /** Uploaded workspace image path, or null. Null means use the initials tile. */
+  photoUrl?: string | null;
   ownerId: number;
   createdAt: string;
   updatedAt: string;

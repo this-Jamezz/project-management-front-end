@@ -2,9 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/iManageLogo.png" />
+
+    <!--
+      The app is dark by default and switches to Daylight via a class on
+      <html>. Setting this before the CSS loads stops a white flash on
+      first paint for Daylight users.
+    -->
+    <meta name="theme-color" content="#0b0618" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>iManage</title>
+
+    <link rel="icon" type="image/png" href="/iManageLogo.png" />
+
+    <title>iManage — Project management that stays out of your way</title>
+    <meta
+      name="description"
+      content="iManage gives your team one calm place to plan work, track priorities and see progress as it happens. Workspaces, projects, Kanban boards and live notifications."
+    />
+
+    <!-- Open Graph, so shared links render a card rather than plain text. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="iManage — Project management that stays out of your way" />
+    <meta
+      property="og:description"
+      content="Workspaces, projects, Kanban boards and live notifications. Free to use."
+    />
+    <meta property="og:image" content="/iManageLogo.png" />
+    <meta name="twitter:card" content="summary" />
   </head>
   <body>
     <div id="root"></div>

@@ -1,25 +1,722 @@
 @import "tailwindcss";
 
+/* Theme variants. The app is dark-first, so `light` is the opt-in one.
+   The equivalent `dark:` variant is declared in case it is needed later. */
+@custom-variant light (&:where(.light, .light *));
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
+    /* Brand */
     --color-primary: #4B0082;
     --color-primary-light: #DBCCE6;
     --color-primary-dark: #34005B;
     --color-lightgray: #E5E4E2;
     --color-darkgray: #899499;
+
+    /* Accents for the aurora background */
+    --color-accent-violet: #A855F7;
+    --color-accent-cyan: #22D3EE;
+    --color-accent-pink: #EC4899;
+    --color-accent-indigo: #6366F1;
+
+    --animate-shimmer: shimmer 2.4s linear infinite;
+
+    /* Snappier than Tailwind's default easing. Used for every short
+       interaction so hovers and pop-ins feel like one system. */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ============================================================
+   SHORT INTERACTION MOTION
+
+   Every duration here is 120-200ms on purpose. Long transitions read as
+   sluggish; these are feedback for a click or a menu opening, not decoration.
+   The backdrop still never animates.
+
+   This is the permitted exception to "only spin and shimmer animate" — these
+   are transient feedback, which is exactly what that rule allows.
+   ============================================================ */
+
+/* Dropdowns and menus. A small scale plus a short rise reads as "opening"
+   without the lag of a long slide. */
+@utility animate-pop-in {
+    animation: pop-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pop-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Dialogs. Slightly longer than a menu because the surface is larger. */
+@utility animate-modal-in {
+    animation: modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.975);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Backdrops and content that only needs a fade. */
+@utility animate-fade-in {
+    animation: fade-in 150ms ease-out both;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Press feedback for anything tappable. Pair with transition-transform. */
+@utility animate-press {
+    transition-property: transform;
+    transition-duration: 120ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Only the skeleton shimmer animates. The backdrop is deliberately static.
+   A moving gradient behind text is distracting, and animating a large
+   background layer repaints continuously during scroll, which reads as
+   jitter. Motion is reserved for spinners and loading feedback. */
+@keyframes shimmer {
+    from {
+        background-position: -200% 0;
+    }
+    to {
+        background-position: 200% 0;
+    }
+}
+
+/* ============================================================
+   GLASS UTILITIES
+
+   Declared with `@utility` rather than as plain classes so Tailwind
+   treats them as real utilities. That matters because `@apply` can only
+   reference registered utilities, not arbitrary class names.
+   ============================================================ */
+
+/* Base glass panel. Cards, list rows, nav bars.
+
+   The base is a DARK translucent tint, not a white overlay. A white overlay
+   over a bright aurora blob washes out, and white text on top of it becomes
+   unreadable. A dark base guarantees contrast regardless of what sits
+   behind the panel. */
+@utility glass {
+    background-color: rgb(17 11 30 / 0.55);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgb(255 255 255 / 0.14);
+    box-shadow:
+        0 8px 32px rgb(0 0 0 / 0.35),
+        inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+
+/* Modals, dropdowns, confirmation dialogs.
+
+   Nearly opaque on purpose. These float over whatever the user is currently
+   looking at, so they must never depend on their backdrop for contrast. The
+   blur stays for the frosted edge; the fill does the legibility work. */
+@utility glass-strong {
+    background-color: rgb(15 10 26 / 0.94);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgb(255 255 255 / 0.16);
+    box-shadow:
+        0 24px 64px rgb(0 0 0 / 0.6),
+        inset 0 1px 0 rgb(255 255 255 / 0.22);
+}
+
+/* Barely-there glass. Wells, inset areas, icon tiles. */
+@utility glass-subtle {
+    background-color: rgb(255 255 255 / 0.05);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid rgb(255 255 255 / 0.12);
+}
+
+/* Frosted form control. */
+@utility glass-input {
+    background-color: rgb(255 255 255 / 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgb(255 255 255 / 0.22);
+    color: #ffffff;
+    outline: none;
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+/* Primary call to action. Keeps the brand purple. */
+@utility glass-button {
+    background-image: linear-gradient(
+        135deg,
+        rgb(168 85 247 / 0.95),
+        rgb(79 70 229 / 0.95)
+    );
+    color: #ffffff;
+    font-weight: 600;
+    border: 1px solid rgb(255 255 255 / 0.28);
+    box-shadow:
+        0 10px 28px rgb(124 58 237 / 0.38),
+        inset 0 1px 0 rgb(255 255 255 / 0.3);
+    transition: all 0.2s ease;
+}
+
+/* Ghost / secondary button. */
+@utility glass-button-ghost {
+    background-color: rgb(255 255 255 / 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgb(255 255 255 / 0.24);
+    color: #ffffff;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+/* Shimmering placeholder for skeletons. */
+@utility glass-skeleton {
+    background-image: linear-gradient(
+        90deg,
+        rgb(255 255 255 / 0.06) 25%,
+        rgb(255 255 255 / 0.18) 37%,
+        rgb(255 255 255 / 0.06) 63%
+    );
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+}
+
+/* Hairline separator tuned for glass. */
+@utility glass-divider {
+    border-color: rgb(255 255 255 / 0.14);
+}
+
+/* ============================================================
+   TOASTS
+   Styled here rather than inline in main.tsx. Inline JS styles cannot
+   read --color-white, so hardcoding them left every toast white-on-white
+   in Daylight. A class can, so the theme token now reaches toasts too.
+   ============================================================ */
+
+.toast-default {
+    background-color: rgb(17 11 30 / 0.92) !important;
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgb(255 255 255 / 0.16) !important;
+    border-radius: 14px !important;
+    color: #ffffff !important;
+    padding: 12px 16px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    box-shadow: 0 8px 32px rgb(0 0 0 / 0.45) !important;
+}
+
+.toast-default.toast-error {
+    background-color: rgb(58 18 30 / 0.94) !important;
+    border-color: rgb(248 113 113 / 0.45) !important;
+}
+
+.light .toast-default {
+    background-color: rgb(255 255 255 / 0.96) !important;
+    border-color: rgb(124 58 237 / 0.22) !important;
+    color: #2a1145 !important;
+    box-shadow: 0 8px 32px rgb(76 29 149 / 0.18) !important;
+}
+
+.light .toast-default.toast-error {
+    background-color: rgb(254 242 242 / 0.97) !important;
+    border-color: rgb(225 29 72 / 0.35) !important;
+    color: #9f1239 !important;
+}
+
+/* ============================================================
+   STATUS COLOURS
+
+   Alert, error and success states previously used literal Tailwind palette
+   classes like `text-amber-50` on `bg-amber-500/10`. Those are fixed hex
+   values, so they ignored the --color-white token flip and became
+   unreadable in Daylight: near-white text on a near-white panel.
+
+   These are semantic and theme-aware. Use them instead of a raw amber,
+   red, rose or emerald utility on any status surface.
+   ============================================================ */
+
+/* Panels: tinted background + border + readable label */
+.alert-warning {
+    color: #fde68a;
+    background-color: rgb(245 158 11 / 0.14);
+    border-color: rgb(245 158 11 / 0.4);
+}
+
+.alert-danger {
+    color: #fecdd3;
+    background-color: rgb(244 63 94 / 0.14);
+    border-color: rgb(244 63 94 / 0.4);
+}
+
+.alert-success {
+    color: #a7f3d0;
+    background-color: rgb(16 185 129 / 0.14);
+    border-color: rgb(16 185 129 / 0.4);
+}
+
+/* Small inline chips, e.g. an overdue badge */
+.chip-danger {
+    color: #fecdd3;
+    background-color: rgb(244 63 94 / 0.2);
+}
+
+.chip-success {
+    color: #a7f3d0;
+    background-color: rgb(16 185 129 / 0.2);
+}
+
+/* Text only, for errors on a neutral surface */
+.status-danger {
+    color: #fca5a5;
+}
+
+.status-success {
+    color: #6ee7b7;
+}
+
+.status-warning {
+    color: #fcd34d;
+}
+
+/* Destructive button, used by logout and delete confirmations */
+.btn-danger {
+    color: #fecdd3;
+    background-color: rgb(244 63 94 / 0.16);
+    border: 1px solid rgb(244 63 94 / 0.3);
+    transition: all 0.2s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+    color: #ffe4e6;
+    background-color: rgb(244 63 94 / 0.26);
+}
+
+.btn-danger:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ---- Daylight ---- */
+
+.light .alert-warning {
+    color: #78350f;
+    background-color: rgb(254 243 199 / 0.92);
+    border-color: rgb(217 119 6 / 0.45);
+}
+
+.light .alert-danger {
+    color: #881337;
+    background-color: rgb(255 228 230 / 0.92);
+    border-color: rgb(225 29 72 / 0.4);
+}
+
+.light .alert-success {
+    color: #065f46;
+    background-color: rgb(209 250 229 / 0.92);
+    border-color: rgb(5 150 105 / 0.4);
+}
+
+.light .chip-danger {
+    color: #9f1239;
+    background-color: rgb(254 226 226 / 0.9);
+}
+
+.light .chip-success {
+    color: #065f46;
+    background-color: rgb(209 250 229 / 0.9);
+}
+
+.light .status-danger {
+    color: #be123c;
+}
+
+.light .status-success {
+    color: #047857;
+}
+
+.light .status-warning {
+    color: #b45309;
+}
+
+.light .btn-danger {
+    color: #9f1239;
+    background-color: rgb(254 226 226 / 0.85);
+    border-color: rgb(225 29 72 / 0.35);
+}
+
+.light .btn-danger:hover:not(:disabled) {
+    color: #881337;
+    background-color: rgb(254 226 226 / 1);
+}
+
+/* ============================================================
+   DECORATIVE BACKDROP
+   Plain classes, only ever referenced from className.
+   ============================================================ */
+
+/* The page backdrop.
+
+   A fixed-position pseudo-element rather than the element's own background,
+   because `background-attachment: fixed` repaints on every scroll frame and
+   drops to a repaint storm on mobile Safari.
+
+   One hue, low contrast, dark base. An earlier version layered five competing
+   radials in violet, cyan, pink, indigo and teal, which was genuinely
+   unpleasant to look at for long stretches. A single deep violet wash at low
+   alpha keeps the brand feel without fighting the text. Less colour, not more. */
+.aurora-bg {
+    position: relative;
+    isolation: isolate;
+}
+
+.aurora-bg::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: #0c0916;
+    background-image:
+        radial-gradient(ellipse 75% 60% at 18% -5%, rgb(91 33 182 / 0.32), transparent 68%),
+        radial-gradient(ellipse 65% 55% at 88% 105%, rgb(76 29 149 / 0.26), transparent 68%);
+}
+
+/* Soft colour blob. Static, and much dimmer than before. Landing and 404 only. */
+.aurora-orb {
+    border-radius: 9999px;
+    filter: blur(90px);
+    opacity: 0.5;
+}
+
+/* Priority accents, reused by the board and the task list. */
+.priority-LOW {
+    color: #67e8f9;
+    background-color: rgb(34 211 238 / 0.16);
+    border-color: rgb(34 211 238 / 0.35);
+}
+.priority-MEDIUM {
+    color: #c4b5fd;
+    background-color: rgb(168 85 247 / 0.16);
+    border-color: rgb(168 85 247 / 0.35);
+}
+.priority-HIGH {
+    color: #fdba74;
+    background-color: rgb(251 146 60 / 0.16);
+    border-color: rgb(251 146 60 / 0.35);
+}
+.priority-URGENT {
+    color: #fda4af;
+    background-color: rgb(244 63 94 / 0.18);
+    border-color: rgb(244 63 94 / 0.4);
+}
+
+/* ============================================================
+   LEGACY CLASSES
+   Kept so Login, Signup and NotFound keep working. Written as plain
+   CSS rather than @apply, since @apply cannot reference the custom
+   utilities above without composing them at build time.
+   ============================================================ */
+
 .button-positive {
-    @apply text-base h-12 w-full rounded-lg text-white font-medium bg-primary transition-all duration-150 cursor-pointer flex items-center justify-center gap-2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    height: 3rem;
+    padding: 0 1rem;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    background-image: linear-gradient(
+        135deg,
+        rgb(168 85 247 / 0.95),
+        rgb(79 70 229 / 0.95)
+    );
+    color: #ffffff;
+    border: 1px solid rgb(255 255 255 / 0.28);
+    box-shadow:
+        0 10px 28px rgb(124 58 237 / 0.38),
+        inset 0 1px 0 rgb(255 255 255 / 0.3);
+    transition: all 0.2s ease;
+}
 
-    @apply hover:bg-primary-dark hover:-translate-y-0.5;
+.button-positive:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+        0 16px 36px rgb(124 58 237 / 0.48),
+        inset 0 1px 0 rgb(255 255 255 / 0.35);
+}
 
-    @apply active:translate-y-0 active:scale-98 active:brightness-90;
+.button-positive:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+}
 
-    @apply disabled:opacity-40 disabled:cursor-not-allowed;
+.button-positive:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .input-default {
-    @apply text-base h-12 w-full border border-gray-400 rounded-lg px-4 outline-none focus:border-primary transition-colors;
+    width: 100%;
+    height: 3rem;
+    padding: 0 1rem;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    background-color: rgb(255 255 255 / 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgb(255 255 255 / 0.22);
+    color: #ffffff;
+    outline: none;
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
 
-    @apply disabled:opacity-40 disabled:cursor-not-allowed;
+.input-default::placeholder {
+    color: rgb(255 255 255 / 0.5);
+}
+
+.input-default:focus {
+    background-color: rgb(255 255 255 / 0.13);
+    border-color: rgb(168 85 247 / 0.85);
+    box-shadow: 0 0 0 3px rgb(168 85 247 / 0.22);
+}
+
+.input-default:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   DAYLIGHT THEME
+   Opt-in via <html class="light">, set from Settings.
+   Frosted panels need an opaque-enough base to stay readable on a
+   pale background.
+   ============================================================ */
+
+/* Daylight ink.
+
+   Tailwind emits `color: var(--color-white)` for `text-white` AND for every
+   opacity variant (`text-white/55` becomes
+   `color-mix(in oklab, var(--color-white) 55%, transparent)`). Overriding the
+   token here therefore flips the whole text system in one place, instead of
+   hunting down `text-white` utilities across every component.
+
+   `html.light` rather than `.light` so it outranks `:root`, where Tailwind
+   defines the default `--color-white`. */
+html.light {
+    --color-white: #2a1145;
+}
+
+.light .aurora-bg::before {
+    background-color: #f5f2fb;
+    background-image:
+        radial-gradient(ellipse 75% 60% at 18% -5%, rgb(221 214 254 / 0.75), transparent 68%),
+        radial-gradient(ellipse 65% 55% at 88% 105%, rgb(237 233 254 / 0.7), transparent 68%);
+}
+
+.light .aurora-orb {
+    filter: blur(100px);
+    opacity: 0.35;
+}
+
+.light .glass {
+    background-color: rgb(255 255 255 / 0.62);
+    border-color: rgb(255 255 255 / 0.85);
+    box-shadow:
+        0 8px 32px rgb(76 29 149 / 0.12),
+        inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.light .glass-strong {
+    background-color: rgb(255 255 255 / 0.97);
+    border-color: rgb(124 58 237 / 0.2);
+    box-shadow:
+        0 24px 64px rgb(76 29 149 / 0.18),
+        inset 0 1px 0 rgb(255 255 255 / 0.95);
+}
+
+.light .glass-subtle {
+    background-color: rgb(255 255 255 / 0.42);
+    border-color: rgb(255 255 255 / 0.7);
+}
+
+.light .glass-input {
+    background-color: rgb(255 255 255 / 0.72);
+    border-color: rgb(124 58 237 / 0.24);
+    color: #2a1145;
+}
+
+.light .glass-input::placeholder {
+    color: rgb(42 17 69 / 0.45);
+}
+
+.light .glass-input:focus {
+    background-color: rgb(255 255 255 / 0.9);
+    border-color: rgb(168 85 247 / 0.9);
+}
+
+.light .glass-button-ghost {
+    background-color: rgb(255 255 255 / 0.6);
+    border-color: rgb(124 58 237 / 0.22);
+    color: #2a1145;
+}
+
+.light .glass-button-ghost:hover:not(:disabled) {
+    background-color: rgb(255 255 255 / 0.85);
+}
+
+.light .glass-divider {
+    border-color: rgb(42 17 69 / 0.12);
+}
+
+.light .glass-skeleton {
+    background-image: linear-gradient(
+        90deg,
+        rgb(255 255 255 / 0.35) 25%,
+        rgb(255 255 255 / 0.75) 37%,
+        rgb(255 255 255 / 0.35) 63%
+    );
+}
+
+.light .priority-LOW {
+    color: #0e7490;
+    background-color: rgb(34 211 238 / 0.14);
+    border-color: rgb(34 211 238 / 0.4);
+}
+.light .priority-MEDIUM {
+    color: #6d28d9;
+    background-color: rgb(168 85 247 / 0.14);
+    border-color: rgb(168 85 247 / 0.4);
+}
+.light .priority-HIGH {
+    color: #c2410c;
+    background-color: rgb(251 146 60 / 0.16);
+    border-color: rgb(251 146 60 / 0.42);
+}
+.light .priority-URGENT {
+    color: #be123c;
+    background-color: rgb(244 63 94 / 0.14);
+    border-color: rgb(244 63 94 / 0.4);
+}
+
+.light .button-positive,
+.light .input-default {
+    color: #2a1145;
+}
+
+.light .input-default {
+    background-color: rgb(255 255 255 / 0.72);
+    border-color: rgb(124 58 237 / 0.24);
+}
+
+.light .input-default::placeholder {
+    color: rgb(42 17 69 / 0.45);
+}
+
+.light select option {
+    background-color: #ffffff;
+    color: #2a1145;
+}
+
+.light ::-webkit-scrollbar-track {
+    background: rgb(42 17 69 / 0.04);
+}
+
+.light ::-webkit-scrollbar-thumb {
+    background: rgb(42 17 69 / 0.2);
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+    background: rgb(42 17 69 / 0.32);
+}
+
+/* ============================================================
+   GLOBAL RESET
+   ============================================================ */
+
+html,
+body,
+#root {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Native selects render an opaque dropdown list on most platforms. */
+select option {
+    background-color: #1e1033;
+    color: #ffffff;
+}
+
+/* Scrollbars, so they do not break the glass look. */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgb(255 255 255 / 0.04);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 0.18);
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgb(255 255 255 / 0.3);
+}
+
+/* ============================================================
+   ACCESSIBILITY
+   Only the skeleton shimmer and the loading spinner animate. Honour a
+   reduced-motion preference for both.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .glass-skeleton {
+        animation: none;
+        background-position: 50% 0;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

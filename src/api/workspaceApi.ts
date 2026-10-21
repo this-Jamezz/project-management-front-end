@@ -1,22 +1,9 @@
 import { fetchWithAuth } from "../auth/fetchWIthAuth";
-import type { Workspace, WorkspaceMember } from "../interface/workspaceInteface";
+import type { Workspace } from "../interface/workspaceInteface";
 
 export interface CreateWorkspaceParams {
   name: string;
   description?: string;
-}
-
-export interface AddMemberParams {
-  workspaceId: number;
-  role?: "ADMIN" | "MEMBER";
-}
-
-
-
-export interface AddMemberResponse {
-  success: boolean;
-  message: string;
-  data: WorkspaceMember;
 }
 
 export async function createWorkspace({
@@ -34,19 +21,13 @@ export async function createWorkspace({
   return response.data;
 }
 
-export async function addMember({
-  workspaceId,
-  role = "MEMBER",
-}: AddMemberParams): Promise<AddMemberResponse> {
-  const response = await fetchWithAuth(
-    `/api/workspace/${workspaceId}/members`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        role,
-      }),
-    }
-  );
+/**
+ * Every workspace the signed-in user is a member of, each with its owner,
+ * members and projects already nested. The app renders the whole workspace
+ * tree from this one call, so there is no separate projects fetch.
+ */
+export async function getUserWorkspaces(): Promise<Workspace[]> {
+  const response = await fetchWithAuth("/api/workspace");
 
-  return response;
+  return response.data;
 }

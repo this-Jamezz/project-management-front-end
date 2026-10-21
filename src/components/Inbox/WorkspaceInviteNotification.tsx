@@ -7,6 +7,8 @@ type WorkspaceInviteNotificationProps = {
   timeAgo?: string;
   onAccept?: () => void;
   onDecline?: () => void;
+  /** Disables both actions, e.g. while the accept request is in flight. */
+  isBusy?: boolean;
 };
 
 export default function WorkspaceInviteNotification({
@@ -16,40 +18,50 @@ export default function WorkspaceInviteNotification({
   senderName,
   onAccept,
   onDecline,
+  isBusy = false,
 }: WorkspaceInviteNotificationProps) {
   return (
-    <div className="flex w-full max-w-sm items-start gap-4 rounded-xl border border-lightgray bg-white p-4 shadow-lg transition-all hover:shadow-xl">
-      {/* Icon/Avatar Indicator */}
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
-        <Building2 size={20} />
+    <div className="glass flex w-full max-w-sm items-start gap-4 rounded-2xl p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/15">
+      {/* Icon */}
+      <div className="glass-subtle flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-violet/25">
+        <Building2 size={19} className="text-accent-violet" />
       </div>
-      
+
       {/* Content */}
       <div className="flex-1">
-        <p className="text-sm leading-snug text-primary-dark flex flex-col gap-2">
-          <span className="font-semibold">{title}</span> {" "}
-          <span>{description}</span>
-          <span >by  {" "} <span className="font-semibold">{senderName}</span></span>
+        <p className="flex flex-col gap-1.5 text-sm leading-snug">
+          <span className="font-semibold">{title}</span>
+          <span className="text-white/65">{description}</span>
+          {senderName && (
+            <span className="text-white/65">
+              by <span className="font-semibold text-white/85">{senderName}</span>
+            </span>
+          )}
         </p>
-        <span className="mt-1 block text-xs font-medium text-darkgray">
-          {timeAgo}
-        </span>
-        
+
+        {timeAgo && (
+          <span className="mt-1.5 block text-xs text-white/45">{timeAgo}</span>
+        )}
+
         {/* Actions */}
-        <div className="mt-3 flex gap-2">
-          <button 
+        <div className="mt-3.5 flex gap-2">
+          <button
+            type="button"
             onClick={onAccept}
-            className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition-all hover:-translate-y-0.5 hover:bg-primary-dark active:translate-y-0"
+            disabled={isBusy}
+            className="glass-button flex flex-1 cursor-pointer whitespace-nowrap items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-45"
           >
-            <Check size={16} strokeWidth={2.5} />
+            <Check size={15} strokeWidth={2.5} />
             Accept
           </button>
-          
-          <button 
+
+          <button
+            type="button"
             onClick={onDecline}
-            className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-lightgray px-3 py-2 text-sm font-medium text-primary-dark transition-colors hover:bg-lightgray"
+            disabled={isBusy}
+            className="glass-button-ghost flex flex-1 cursor-pointer whitespace-nowrap items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-45"
           >
-            <X size={16} strokeWidth={2.5} />
+            <X size={15} strokeWidth={2.5} />
             Decline
           </button>
         </div>

@@ -1,87 +1,112 @@
 import { useEffect, useRef, useState } from "react";
-import { X, User as UserIcon, ChevronDown } from "lucide-react";
+import { X, User as UserIcon, ChevronDown, Loader, Search } from "lucide-react";
 import { searchUserByEmail } from "../../api/userApi";
 import type { User } from "../../api/userApi";
 import { createInvitation } from "../../api/worspaceInvitationApi";
 import toast from "react-hot-toast";
-import Loading from "./Loading";
+import Modal from "./Modal";
 
 type InviteMemberModalProps = {
   onClose: () => void;
   workspaceId: number;
 };
 
+const ROLE_COPY = {
+  MEMBER: "Can access and work on workspace items.",
+  ADMIN: "Can manage workspace members and settings.",
+} as const;
+
 export default function InviteMemberModal({
   onClose,
   workspaceId,
 }: InviteMemberModalProps) {
-
   const [email, setEmail] = useState("");
   const [receiverId, setReceiverId] = useState<number | null>(null);
   const [role, setRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
 
-
   const [isRoleOpen, setIsRoleOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-const [error, setError] = useState("");
+  const [error, setError] = useState("");
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [users, setUsers] = useState<User[]>([]);
 
-  const handleSearch = async (value: string) => {
-    setEmail(value);
+  /**
+   * Debounced search.
+   *
+   * The previous version called the API on every keystroke with no
+   * cancellation, which produced a request storm and let out-of-order
+   * responses overwrite newer results.
+   */
+  useEffect(() => {
+    const value = email.trim();
 
-    if (!value.trim()) {
+    if (!value) {
       setUsers([]);
+      setIsSearching(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsSearching(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchUserByEmail({ email: value });
+        if (!cancelled) setUsers(results);
+      } catch {
+        if (!cancelled) setUsers([]);
+      } finally {
+        if (!cancelled) setIsSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [email]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (isSubmitting) return;
+
+    if (!receiverId) {
+      setError("Select a person from the search results.");
       return;
     }
 
     try {
-      const results = await searchUserByEmail({
-        email: value,
+      setIsSubmitting(true);
+      setError("");
+
+      const data = await createInvitation({
+        workspaceId,
+        receiverId,
+        role,
       });
 
-      setUsers(results);
-    } catch (error) {
-      console.error("Failed to search users:", error);
-      setUsers([]);
+      if (data.success) {
+        toast.success(data.message || "Invitation sent");
+      } else {
+        toast.error(data.message || "Failed to send invitation");
+      }
+
+      onClose();
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to send invitation. Please try again.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-
-  if (!receiverId) {
-    setError("Please select a user from the search results.");
-    return;
-  }
-
-  try {
-    setIsSubmitting(true);
-    setError("");
-
-    const data = await createInvitation({
-      workspaceId,
-      receiverId,
-      role,
-    });
-
-    if(data.success){
-      toast.success(data?.message)
-    }
-    if(!data.success){
-      toast.error(data?.message)
-    }
-
-    onClose();
-  } catch (error) {
-    console.error("Failed to send invitation:", error);
-    setError("Failed to send invitation. Please try again.");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -100,128 +125,146 @@ const [error, setError] = useState("");
     };
   }, []);
 
+  const inputClass =
+    "glass-input w-full rounded-xl px-4 py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed";
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-130 overflow-visible rounded-[20px] bg-white shadow-2xl">
-
-
-
+    <Modal
+      onClose={onClose}
+      label="Invite people"
+      isBusy={isSubmitting}
+      // overflow-visible so the search results and role menu can escape the
+      // panel. Nothing else on this dialog needs a scroll container.
+      panelClassName="glass-strong animate-modal-in w-full max-w-lg overflow-visible rounded-3xl"
+    >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
-          <h2 className="text-[22px] font-semibold text-primary-dark">
-            Invite people for free
-          </h2>
+          <h2 className="text-xl font-semibold">Invite people</h2>
 
           <button
+            type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-lightgray text-darkgray transition-colors hover:bg-gray-300 hover:text-primary-dark"
+            disabled={isSubmitting}
+            aria-label="Close"
+            className="glass-button-ghost cursor-pointer rounded-lg p-1.5 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <X size={18} strokeWidth={2.5} />
+            <X size={18} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
-
-          {/* Body */}
-          <div className="px-6 pb-8 space-y-6">
-
-            {/* Email Field */}
+          <div className="space-y-6 px-6 pb-6">
+            {/* Email */}
             <div className="relative">
-
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-medium text-darkgray"
-              >
+              <label htmlFor="email" className="mb-2 block text-sm font-medium">
                 Email
               </label>
 
-              <input
-                id="email"
-                type="text"
-                value={email}
-                onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Enter email"
-                className="w-full rounded-xl border border-lightgray px-4 py-3 text-base text-primary-dark outline-none transition-colors placeholder:text-darkgray focus:border-primary focus:ring-1 focus:ring-primary"
-                autoFocus
-              />
-                {/* Search Results */}
-                {users.length > 0 && (
-                  <div className="absolute left-0 right-0 top-full max-h-100 z-50 mt-2 overflow-y-auto scrollbar-none rounded-xl border border-lightgray bg-white shadow-lg">
-
-                    {users.map((user) => (
-                      <button
-                        key={user.id}
-                        type="button"
-                        onClick={() => {
-                          setEmail(user.email);
-                          setReceiverId(user.id)
-                          setUsers([]);
-                        }}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-lightgray"
-                      >
-
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <UserIcon size={18} />
-                        </div>
-
-                        <div>
-                          <p className="font-medium text-primary-dark">
-                            {user.name}
-                          </p>
-
-                          <p className="text-sm text-darkgray">
-                            {user.email}
-                          </p>
-                        </div>
-
-                      </button>
-                    ))}
-
-                  </div>
-                )}
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-white/45"
+                />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  disabled={isSubmitting}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    // Changing the address invalidates a previous pick.
+                    setReceiverId(null);
+                    setError("");
+                  }}
+                  placeholder="Enter email"
+                  className={`${inputClass} pl-10`}
+                  autoFocus
+                />
               </div>
- 
 
+              {/* Results */}
+              {(users.length > 0 || isSearching) && (
+                <div className="glass-strong animate-pop-in absolute inset-x-0 top-full z-50 mt-2 max-h-56 overflow-y-auto rounded-2xl">
+                  {isSearching && users.length === 0 && (
+                    <div className="flex items-center gap-2.5 px-4 py-3.5 text-sm text-white/55">
+                      <Loader size={15} className="animate-spin" />
+                      Searching...
+                    </div>
+                  )}
 
-            {/* Role Selection */}
-            <div className="relative">
-              <label className="mb-2 block text-sm font-medium text-darkgray">
-                Invite as
-              </label>
-   <div ref={dropdownRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setIsRoleOpen(!isRoleOpen)}
-                className="flex w-full items-center gap-3 rounded-xl border border-lightgray px-3 py-2.5 text-left transition-colors hover:border-primary focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F3F4F6] text-primary-dark">
-                  <UserIcon size={20} strokeWidth={2} />
+                  {users.map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => {
+                        setEmail(user.email);
+                        setReceiverId(user.id);
+                        setUsers([]);
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/12"
+                    >
+                      <div className="glass-subtle flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-violet/25">
+                        <UserIcon size={17} className="text-accent-violet" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{user.name}</p>
+                        <p className="truncate text-sm text-white/55">
+                          {user.email}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
                 </div>
+              )}
 
-                <div className="flex flex-1 flex-col">
-                  <div className="flex items-center gap-1">
-                    <span className="text-base font-semibold text-primary-dark">
-                      {role}
-                    </span>
+              {receiverId && (
+                <p className="mt-2 flex items-center gap-1.5 text-xs status-success">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Person selected
+                </p>
+              )}
 
-                    <ChevronDown
-                      size={16}
-                      className={`text-darkgray transition-transform ${isRoleOpen ? "rotate-180" : ""
-                        }`}
-                    />
+              {error && <p className="mt-2 text-sm status-danger">{error}</p>}
+            </div>
+
+            {/* Role */}
+            <div className="relative">
+              <label className="mb-2 block text-sm font-medium">Invite as</label>
+
+              <div ref={dropdownRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsRoleOpen(!isRoleOpen)}
+                  disabled={isSubmitting}
+                  aria-expanded={isRoleOpen}
+                  className={`${inputClass} flex items-center gap-3 text-left`}
+                >
+                  <div className="glass-subtle flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                    <UserIcon size={19} />
                   </div>
 
-                  <span className="text-sm text-darkgray">
-                    {role === "ADMIN"
-                      ? "Can manage workspace members and settings."
-                      : "Can access and work on workspace items."}
-                  </span>
-                </div>
-              </button>
-           
+                  <div className="flex flex-1 flex-col">
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-semibold">{role}</span>
+                      <ChevronDown
+                        size={15}
+                        className={`text-white/50 transition-transform ${
+                          isRoleOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </div>
+                    <span className="text-xs text-white/55">
+                      {ROLE_COPY[role]}
+                    </span>
+                  </div>
+                </button>
+
                 {isRoleOpen && (
-                  <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-auto rounded-xl border border-lightgray bg-white shadow-lg">
+                  // Opens UPWARD. The role picker is the last field in the
+                  // form, so a downward menu extended past the card and made
+                  // the whole dialog read as sitting too high on screen.
+                  <div className="glass-strong animate-fade-in absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-2xl">
                     {(["MEMBER", "ADMIN"] as const).map((option) => (
                       <button
                         key={option}
@@ -230,22 +273,18 @@ const [error, setError] = useState("");
                           setRole(option);
                           setIsRoleOpen(false);
                         }}
-                        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-lightgray ${role === option ? "bg-primary/5" : ""
-                          }`}
+                        className={`flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/12 ${
+                          role === option ? "bg-white/12" : ""
+                        }`}
                       >
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F3F4F6] text-primary-dark">
-                          <UserIcon size={18} />
+                        <div className="glass-subtle flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                          <UserIcon size={17} />
                         </div>
 
                         <div className="flex flex-col">
-                          <span className="font-semibold text-primary-dark">
-                            {option}
-                          </span>
-
-                          <span className="text-sm text-darkgray">
-                            {option === "ADMIN"
-                              ? "Can manage workspace members and settings."
-                              : "Can access and work on workspace items."}
+                          <span className="font-semibold">{option}</span>
+                          <span className="text-xs text-white/55">
+                            {ROLE_COPY[option]}
                           </span>
                         </div>
                       </button>
@@ -254,38 +293,29 @@ const [error, setError] = useState("");
                 )}
               </div>
             </div>
-
-
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 border-t border-lightgray bg-white px-6 py-4">
-
+          <div className="glass-divider flex items-center justify-end gap-3 border-t px-6 py-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg px-4 py-2.5 text-sm font-medium text-primary-dark transition-colors hover:bg-lightgray"
+              disabled={isSubmitting}
+              className="glass-button-ghost cursor-pointer rounded-xl px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
             >
               Cancel
             </button>
 
             <button
               type="submit"
-              disabled={!email.trim()}
-              className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-primary-dark hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              disabled={!receiverId || isSubmitting}
+              className="glass-button flex cursor-pointer items-center gap-2 rounded-xl px-5 py-2.5 text-sm disabled:cursor-not-allowed"
             >
-              Invite
+              {isSubmitting && <Loader size={15} className="animate-spin" />}
+              {isSubmitting ? "Sending..." : "Invite"}
             </button>
-
           </div>
-
         </form>
-      </div>
-                {isSubmitting &&
-                 <Loading message={"Sending Invite"}/>
-
-                }
-    
-    </div>
+    </Modal>
   );
 }
